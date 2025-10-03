@@ -67,28 +67,38 @@ export class AuthService {
 
   async login(data: LoginRequest): Promise<AuthResponse> {
     try {
+      console.log('Intentando login para:', data.email);
+      
       // Autenticar con Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
+      console.log('Respuesta de Supabase Auth:', { authData, authError });
+
       if (authError) {
+        console.log('Error de autenticación:', authError.message);
         return { user: null, token: null, error: authError.message };
       }
 
       if (!authData.user) {
+        console.log('No se encontró usuario en la respuesta');
         return { user: null, token: null, error: 'Credenciales inválidas' };
       }
 
       // Obtener perfil del usuario
+      console.log('Buscando perfil para usuario ID:', authData.user.id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authData.user.id)
         .single();
 
+      console.log('Respuesta de perfil:', { profileData, profileError });
+
       if (profileError) {
+        console.log('Error al obtener perfil:', profileError.message);
         return { user: null, token: null, error: 'Perfil de usuario no encontrado' };
       }
 
