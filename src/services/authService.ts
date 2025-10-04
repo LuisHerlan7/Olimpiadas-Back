@@ -20,17 +20,17 @@ export class AuthService {
         return { user: null, token: null, error: 'Error al crear usuario' };
       }
 
-      // Crear perfil de usuario en la tabla profiles
+      // Crear perfil de usuario en la tabla perfiles
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+        .from('perfiles')
         .insert({
           id: authData.user.id,
-          email: data.email,
+          correo: data.email,
           nombre: data.nombre,
           apellido: data.apellido,
-          role: data.role,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          rol: data.role,
+          fecha_creacion: new Date().toISOString(),
+          fecha_actualizacion: new Date().toISOString()
         })
         .select()
         .single();
@@ -52,8 +52,19 @@ export class AuthService {
         { expiresIn: '24h' }
       );
 
+      // Mapear los datos del perfil al formato esperado
+      const userData = {
+        id: profileData.id,
+        email: profileData.correo,
+        nombre: profileData.nombre,
+        apellido: profileData.apellido,
+        role: profileData.rol,
+        created_at: profileData.fecha_creacion,
+        updated_at: profileData.fecha_actualizacion
+      };
+
       return {
-        user: profileData as User,
+        user: userData as User,
         token
       };
     } catch (error) {
@@ -89,13 +100,19 @@ export class AuthService {
 
       // Obtener perfil del usuario
       console.log('Buscando perfil para usuario ID:', authData.user.id);
+      console.log('Tipo de ID:', typeof authData.user.id);
+      console.log('ID como string:', JSON.stringify(authData.user.id));
+      
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+        .from('perfiles')
         .select('*')
         .eq('id', authData.user.id)
         .single();
 
       console.log('Respuesta de perfil:', { profileData, profileError });
+      console.log('Error details:', profileError);
+      console.log('Datos del perfil encontrado:', profileData);
+      console.log('Rol del perfil:', profileData?.role);
 
       if (profileError) {
         console.log('Error al obtener perfil:', profileError.message);
@@ -106,15 +123,26 @@ export class AuthService {
       const token = jwt.sign(
         { 
           userId: authData.user.id, 
-          email: profileData.email, 
-          role: profileData.role 
+          email: profileData.correo, 
+          role: profileData.rol 
         },
         config.jwtSecret,
         { expiresIn: '24h' }
       );
 
+      // Mapear los datos del perfil al formato esperado
+      const userData = {
+        id: profileData.id,
+        email: profileData.correo,
+        nombre: profileData.nombre,
+        apellido: profileData.apellido,
+        role: profileData.rol,
+        created_at: profileData.fecha_creacion,
+        updated_at: profileData.fecha_actualizacion
+      };
+
       return {
-        user: profileData as User,
+        user: userData as User,
         token
       };
     } catch (error) {
@@ -153,7 +181,7 @@ export class AuthService {
       
       // Obtener datos actualizados del usuario
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+        .from('perfiles')
         .select('*')
         .eq('id', decoded.userId)
         .single();
@@ -177,7 +205,7 @@ export class AuthService {
   async getUserById(userId: string): Promise<{ user: User | null; error?: string }> {
     try {
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+        .from('perfiles')
         .select('*')
         .eq('id', userId)
         .single();
