@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config/database';
 import authRoutes from './routes/authRoutes';
 import protectedRoutes from './routes/protectedRoutes';
+import encargadoRoutes from './routes/encargadoRoutes';
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/protected', protectedRoutes);
+app.use('/api', encargadoRoutes);
 
 // Ruta de salud
 app.get('/api/health', (req, res) => {
@@ -53,6 +55,7 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       protected: '/api/protected',
+      encargados: '/api/encargados',
       health: '/api/health'
     }
   });
