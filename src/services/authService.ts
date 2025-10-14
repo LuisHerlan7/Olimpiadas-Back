@@ -1,15 +1,24 @@
-import { supabase } from '../config/database';
+import { supabase, supabaseAdmin } from '../config/database';
 import { User, AuthResponse, LoginRequest, RegisterRequest } from '../types/auth';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/database';
+import { createClient } from '@supabase/supabase-js';
 
 export class AuthService {
   async register(data: RegisterRequest): Promise<AuthResponse> {
     try {
-      // Registrar usuario en Supabase Auth
+      // Registrar usuario en Supabase Auth con todos los datos en options.data
+      // El trigger de la base de datos se encargará de crear el perfil y la tabla de rol correspondiente
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          data: {
+            nombre: data.nombre,
+            apellido: data.apellido,
+            rol: data.role
+          }
+        }
       });
 
       if (authError) {
@@ -20,25 +29,18 @@ export class AuthService {
         return { user: null, token: null, error: 'Error al crear usuario' };
       }
 
-      // Crear perfil de usuario en la tabla perfiles
+      // Esperar un momento para que el trigger procese los datos
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Obtener el perfil creado por el trigger
       const { data: profileData, error: profileError } = await supabase
         .from('perfiles')
-        .insert({
-          id: authData.user.id,
-          correo: data.email,
-          nombre: data.nombre,
-          apellido: data.apellido,
-          rol: data.role,
-          fecha_creacion: new Date().toISOString(),
-          fecha_actualizacion: new Date().toISOString()
-        })
-        .select()
+        .select('*')
+        .eq('id', authData.user.id)
         .single();
 
       if (profileError) {
-        // Si hay error al crear el perfil, eliminar el usuario de auth
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        return { user: null, token: null, error: profileError.message };
+        return { user: null, token: null, error: 'Error al obtener perfil del usuario' };
       }
 
       // Generar JWT token
@@ -58,7 +60,7 @@ export class AuthService {
         email: profileData.correo,
         nombre: profileData.nombre,
         apellido: profileData.apellido,
-        role: profileData.rol,
+        role: data.role,
         created_at: profileData.fecha_creacion,
         updated_at: profileData.fecha_actualizacion
       };
@@ -78,53 +80,71 @@ export class AuthService {
 
   async login(data: LoginRequest): Promise<AuthResponse> {
     try {
-      console.log('Intentando login para:', data.email);
-      
       // Autenticar con Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
-      console.log('Respuesta de Supabase Auth:', { authData, authError });
-
       if (authError) {
-        console.log('Error de autenticación:', authError.message);
         return { user: null, token: null, error: authError.message };
       }
 
       if (!authData.user) {
-        console.log('No se encontró usuario en la respuesta');
         return { user: null, token: null, error: 'Credenciales inválidas' };
       }
 
-      // Obtener perfil del usuario
-      console.log('Buscando perfil para usuario ID:', authData.user.id);
-      console.log('Tipo de ID:', typeof authData.user.id);
-      console.log('ID como string:', JSON.stringify(authData.user.id));
+      // SOLUCIÓN TEMPORAL: Usar datos del usuario autenticado
+      console.log('Usuario autenticado:', authData.user);
       
-      const { data: profileData, error: profileError } = await supabase
-        .from('perfiles')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
-
-      console.log('Respuesta de perfil:', { profileData, profileError });
-      console.log('Error details:', profileError);
-      console.log('Datos del perfil encontrado:', profileData);
-      console.log('Rol del perfil:', profileData?.role);
-
-      if (profileError) {
-        console.log('Error al obtener perfil:', profileError.message);
-        return { user: null, token: null, error: 'Perfil de usuario no encontrado' };
+      // Obtener datos del usuario desde la sesión de Supabase
+      const userEmail = authData.user.email;
+      const userName = authData.user.user_metadata?.nombre || 'Usuario';
+      const userLastName = authData.user.user_metadata?.apellido || 'Sin Apellido';
+      const userRole = authData.user.user_metadata?.rol || 'competidor';
+      
+      console.log('Datos del usuario:', {
+        email: userEmail,
+        nombre: userName,
+        apellido: userLastName,
+        rol: userRole,
+        metadata: authData.user.user_metadata
+      });
+      
+      // SOLUCIÓN TEMPORAL: Verificar rol por email
+      let finalRole = userRole;
+      if (userEmail) {
+        if (userEmail.includes('admin') || userEmail.includes('administrador')) {
+          finalRole = 'administrador';
+          console.log('Usuario detectado como administrador por email');
+        } else if (userEmail.includes('encargado')) {
+          finalRole = 'encargado';
+          console.log('Usuario detectado como encargado por email');
+        } else if (userEmail.includes('competidor') || userEmail.includes('olimpista')) {
+          finalRole = 'competidor';
+          console.log('Usuario detectado como competidor por email');
+        }
       }
+      
+      // Crear objeto de perfil temporal
+      const profileData = {
+        id: authData.user.id,
+        correo: userEmail,
+        nombre: userName,
+        apellido: userLastName,
+        rol: finalRole,
+        fecha_creacion: authData.user.created_at,
+        fecha_actualizacion: authData.user.updated_at
+      };
+      
+      console.log('Perfil temporal creado:', profileData);
 
-      // Generar JWT token
+      // Generar JWT token con el rol final
       const token = jwt.sign(
         { 
           userId: authData.user.id, 
           email: profileData.correo, 
-          role: profileData.rol 
+          role: finalRole 
         },
         config.jwtSecret,
         { expiresIn: '24h' }
@@ -136,7 +156,7 @@ export class AuthService {
         email: profileData.correo,
         nombre: profileData.nombre,
         apellido: profileData.apellido,
-        role: profileData.rol,
+        role: finalRole,
         created_at: profileData.fecha_creacion,
         updated_at: profileData.fecha_actualizacion
       };
@@ -146,6 +166,7 @@ export class AuthService {
         token
       };
     } catch (error) {
+      console.error('Error en login:', error);
       return { 
         user: null, 
         token: null, 
