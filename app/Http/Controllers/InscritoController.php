@@ -201,5 +201,79 @@ class InscritoController extends Controller
         }
     }
 
+    public function store(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'documento' => ['required', 'string', 'regex:/^\d{5,}$/'],
+                'nombres' => ['required', 'string', 'max:255'],
+                'apellidos' => ['required', 'string', 'max:255'],
+                'unidad' => ['nullable', 'string', 'max:255'],
+                'area' => ['required', 'string', 'max:255'],
+                'nivel' => ['required', 'string', 'max:255'],
+                'area_id' => ['nullable', 'integer', 'exists:areas,id'],
+                'nivel_id' => ['nullable', 'integer', 'exists:niveles,id'],
+            ]);
+
+            // Verificar duplicado (documento + área + nivel)
+            $exists = Inscrito::where('documento', $validated['documento'])
+                ->where('area', $validated['area'])
+                ->where('nivel', $validated['nivel'])
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'message' => 'Ya existe un inscrito con este documento, área y nivel.',
+                    'errors' => ['documento' => ['El documento ya está registrado para esta área y nivel.']]
+                ], 422);
+            }
+
+            $inscrito = Inscrito::create($validated);
+
+            return response()->json([
+                'message' => 'Inscrito creado exitosamente.',
+                'data' => $inscrito
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error("Error al crear inscrito: " . $e->getMessage());
+            return response()->json([
+                'message' => 'No se pudo crear el inscrito.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $inscrito = Inscrito::find($id);
+            
+            if (!$inscrito) {
+                return response()->json([
+                    'message' => 'Inscrito no encontrado.'
+                ], 404);
+            }
+
+            $inscrito->delete();
+
+            return response()->json([
+                'message' => 'Inscrito eliminado exitosamente.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error("Error al eliminar inscrito: " . $e->getMessage());
+            return response()->json([
+                'message' => 'No se pudo eliminar el inscrito.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
 

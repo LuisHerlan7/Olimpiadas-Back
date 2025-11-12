@@ -92,7 +92,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // ===================================================
     Route::middleware('role:ADMINISTRADOR')->group(function () {
         Route::post('/inscritos/import', [InscritoController::class, 'import'])->name('inscritos.import');
+        Route::post('/inscritos', [InscritoController::class, 'store'])->name('inscritos.store');
         Route::get('/inscritos', [InscritoController::class, 'getInscritos'])->name('inscritos.list');
+        Route::delete('/inscritos/{id}', [InscritoController::class, 'destroy'])->name('inscritos.destroy');
     });
 });
 
