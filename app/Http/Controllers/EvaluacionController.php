@@ -32,27 +32,10 @@ class EvaluacionController extends Controller
             $perPage = max(1, min((int)$request->get('per_page', 10), 100));
             $search  = trim((string)$request->get('search', ''));
 
-            // Asociaciones: áreas del evaluador + nivel_id opcional (desde pivot evaluador_area)
-            $asocs = $evaluador->asociaciones()
-                ->select('areas.id as area_id', 'areas.nombre as area_nombre', 'evaluador_area.nivel_id')
-                ->get();
-
-            // Si no tiene asociaciones → paginado vacío
-            if ($asocs->isEmpty()) {
-                $empty = Inscrito::query()
-                    ->whereRaw(DB::getDriverName() === 'pgsql' ? 'true = false' : '1 = 0')
-                    ->paginate($perPage);
-                return response()->json($empty, 200);
-            }
-
-            // Mapa nivel_id => nombre para cotejar contra el string de Inscrito.nivel
-            $nivelIds = $asocs->pluck('nivel_id')->filter()->unique()->values();
-            $nivelesById = $nivelIds->isNotEmpty()
-                ? Nivel::whereIn('id', $nivelIds)->pluck('nombre', 'id')
-                : collect();
-
-            // Base query de inscritos (filtros por texto en nombres/apellidos/documento)
+            // Query de inscritos: mostrar TODOS sin filtrar por área/nivel
             $q = Inscrito::query();
+            
+            // Solo filtro por búsqueda de texto (nombres/apellidos/documento)
             if ($search !== '') {
                 $s = mb_strtolower($search);
                 $q->where(function ($qq) use ($s) {
@@ -61,28 +44,6 @@ class EvaluacionController extends Controller
                        ->orWhereRaw('LOWER(documento) LIKE ?', ["%{$s}%"]);
                 });
             }
-
-            // Filtro por asociaciones (comparación por NOMBRE de área/nivel, case-insensitive)
-            $q->where(function ($qq) use ($asocs, $nivelesById) {
-                foreach ($asocs as $a) {
-                    $areaNombre = (string) $a->area_nombre;
-                    $nivelId    = $a->nivel_id;
-
-                    $qq->orWhere(function ($or) use ($areaNombre, $nivelId, $nivelesById) {
-                        $or->whereRaw('LOWER(area) = ?', [mb_strtolower($areaNombre)]);
-
-                        if (!is_null($nivelId)) {
-                            $nivelNombre = (string) ($nivelesById[$nivelId] ?? '');
-                            if ($nivelNombre !== '') {
-                                $or->whereRaw('LOWER(nivel) = ?', [mb_strtolower($nivelNombre)]);
-                            } else {
-                                // Si no se puede resolver el nombre del nivel, forzamos falso
-                                $or->whereRaw(DB::getDriverName() === 'pgsql' ? 'true = false' : '1 = 0');
-                            }
-                        }
-                    });
-                }
-            });
 
             $paginator = $q
                 ->orderBy('apellidos')
@@ -274,35 +235,13 @@ class EvaluacionController extends Controller
        ====================== */
 
     /**
-     * Autoriza si el evaluador puede evaluar al inscrito:
-     * - Coincide por NOMBRE de área (Inscrito.area) con algún área asignada al evaluador.
-     * - Si la asignación tiene nivel específico, validamos NOMBRE de nivel (Inscrito.nivel).
+     * Autoriza si el evaluador puede evaluar al inscrito.
+     * Ahora permite evaluar CUALQUIER inscrito sin restricciones de área/nivel.
      */
     private function evaluadorPuedeEvaluar($evaluador, Inscrito $inscrito): bool
     {
-        $asocs = $evaluador->asociaciones()
-            ->select('areas.id as area_id', 'areas.nombre as area_nombre', 'evaluador_area.nivel_id')
-            ->get();
-
-        if ($asocs->isEmpty()) return false;
-
-        $nivelIds = $asocs->pluck('nivel_id')->filter()->unique()->values();
-        $nivelesById = $nivelIds->isNotEmpty()
-            ? Nivel::whereIn('id', $nivelIds)->pluck('nombre', 'id')
-            : collect();
-
-        foreach ($asocs as $a) {
-            if (strcasecmp((string)$a->area_nombre, (string)$inscrito->area) === 0) {
-                if (is_null($a->nivel_id)) {
-                    return true; // sin nivel en la asociación
-                }
-                $nivelNombre = (string) ($nivelesById[$a->nivel_id] ?? '');
-                if ($nivelNombre !== '' && strcasecmp($nivelNombre, (string)$inscrito->nivel) === 0) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        // Todos los evaluadores pueden evaluar cualquier inscrito
+        return true;
     }
 
     /** Resuelve Area.id por nombre (case-insensitive); si no existe retorna null. */
