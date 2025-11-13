@@ -15,8 +15,21 @@ class CheckRole
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
-        $userSlugs = collect($user->roles ?? [])
-            ->map(fn($r) => strtoupper((string)(is_array($r) ? ($r['slug'] ?? '') : ($r->slug ?? ''))))
+        // Cargar roles siempre para asegurar que estén disponibles
+        $user->load('roles');
+        
+        // Obtener slugs de los roles del usuario
+        $userRoles = $user->roles ?? collect();
+        $userSlugs = collect($userRoles)
+            ->map(function($r) {
+                if (is_array($r)) {
+                    return strtoupper((string)($r['slug'] ?? ''));
+                }
+                if (is_object($r)) {
+                    return strtoupper((string)($r->slug ?? ''));
+                }
+                return '';
+            })
             ->filter();
 
         $required = collect($roles)->map(fn($r) => strtoupper((string)$r))->filter();
