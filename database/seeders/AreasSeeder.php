@@ -9,9 +9,23 @@ class AreasSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('areas')->insert([
-            ['nombre' => 'Ingenieria de Sistemas', 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Ingenieria Civil',       'activo' => true, 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        // Usar updateOrCreate para evitar duplicados si se ejecuta múltiples veces
+        $areas = [
+            'Matematicas',
+            'Fisica',
+            'Quimica',
+            'Biologia',
+            'Robotica',
+            'Informatica',
+            'Ingenieria de Sistemas',
+            'Ingenieria Civil',
+        ];
+
+        foreach ($areas as $nombre) {
+            DB::table('areas')->updateOrInsert(
+                ['nombre' => $nombre],
+                ['activo' => true, 'created_at' => now(), 'updated_at' => now()]
+            );
+        }
     }
 }
