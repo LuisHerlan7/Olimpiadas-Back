@@ -13,6 +13,7 @@ use App\Http\Controllers\ClasificacionController;
 use App\Http\Controllers\FinalEvaluacionController;
 use App\Http\Controllers\LogNotasController;
 use App\Http\Controllers\FinalistaController; // ✅ NUEVO (HU-9)
+use App\Http\Controllers\FaseController;
 
 // Middlewares
 use App\Http\Middleware\AuthResponsable;
@@ -58,6 +59,18 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('catalogo.areas');
     Route::get('/niveles', fn () => Nivel::select('id', 'nombre')->orderBy('id')->get())
         ->name('catalogo.niveles');
+
+    // 📅 Fases del proceso
+    Route::get('/fases/inscripcion', [FaseController::class, 'getInscripcion'])
+        ->name('fases.inscripcion');
+    
+    // Gestión de fase de inscripción (solo ADMIN)
+    Route::middleware('role:ADMINISTRADOR')->group(function () {
+        Route::put('/fases/inscripcion', [FaseController::class, 'updateInscripcion'])
+            ->name('fases.inscripcion.update');
+        Route::post('/fases/inscripcion/cancelar', [FaseController::class, 'cancelarInscripcion'])
+            ->name('fases.inscripcion.cancelar');
+    });
 
     // ===================================================
     // 👤 RESPONSABLES - CRUD (solo ADMIN)
