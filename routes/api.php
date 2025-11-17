@@ -63,13 +63,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // 📅 Fases del proceso
     Route::get('/fases/inscripcion', [FaseController::class, 'getInscripcion'])
         ->name('fases.inscripcion');
+    Route::get('/fases/asignacion', [FaseController::class, 'getAsignacion'])
+        ->name('fases.asignacion');
     
-    // Gestión de fase de inscripción (solo ADMIN)
+    // Gestión de fases (solo ADMIN)
     Route::middleware('role:ADMINISTRADOR')->group(function () {
         Route::put('/fases/inscripcion', [FaseController::class, 'updateInscripcion'])
             ->name('fases.inscripcion.update');
         Route::post('/fases/inscripcion/cancelar', [FaseController::class, 'cancelarInscripcion'])
             ->name('fases.inscripcion.cancelar');
+        Route::put('/fases/asignacion', [FaseController::class, 'updateAsignacion'])
+            ->name('fases.asignacion.update');
+        Route::post('/fases/asignacion/cancelar', [FaseController::class, 'cancelarAsignacion'])
+            ->name('fases.asignacion.cancelar');
     });
 
     // ===================================================

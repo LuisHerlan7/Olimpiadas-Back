@@ -114,6 +114,11 @@ class EvaluacionController extends Controller
                 $areaId  = $this->resolverAreaIdPorNombre($inscrito->area);
                 $nivelId = $this->resolverNivelIdPorNombre($inscrito->nivel);
 
+                // Verificar que el evaluador tenga un ID válido
+                if (!isset($evaluador->id) || $evaluador->id <= 0) {
+                    throw new \Exception('ID de evaluador inválido');
+                }
+
                 $eval = Evaluacion::firstOrNew([
                     'inscrito_id'  => $inscrito->id,
                     'evaluador_id' => $evaluador->id,
@@ -121,10 +126,31 @@ class EvaluacionController extends Controller
 
                 $eval->area_id       = $areaId;
                 $eval->nivel_id      = $nivelId;
-                if (array_key_exists('notas', $data))         $eval->notas         = $data['notas'];
-                if (array_key_exists('nota_final', $data))    $eval->nota_final    = $data['nota_final'];
-                if (array_key_exists('concepto', $data))      $eval->concepto      = $data['concepto'];
-                if (array_key_exists('observaciones', $data)) $eval->observaciones = $data['observaciones'];
+                
+                // Manejar notas: asegurar que sea array o null
+                if (array_key_exists('notas', $data)) {
+                    $eval->notas = is_array($data['notas']) ? $data['notas'] : [];
+                } else {
+                    $eval->notas = [];
+                }
+                
+                if (array_key_exists('nota_final', $data) && $data['nota_final'] !== null && $data['nota_final'] !== '') {
+                    $eval->nota_final = $data['nota_final'];
+                } else {
+                    $eval->nota_final = null;
+                }
+                
+                if (array_key_exists('concepto', $data) && $data['concepto'] !== null) {
+                    $eval->concepto = $data['concepto'];
+                } else {
+                    $eval->concepto = null;
+                }
+                
+                if (array_key_exists('observaciones', $data) && $data['observaciones'] !== null) {
+                    $eval->observaciones = $data['observaciones'];
+                } else {
+                    $eval->observaciones = null;
+                }
 
                 $eval->estado = 'borrador';
                 $eval->finalizado_at = null;
@@ -139,8 +165,15 @@ class EvaluacionController extends Controller
                 'msg'  => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $data ?? null,
+                'evaluador_id' => $evaluador->id ?? null,
+                'inscrito_id' => $inscrito->id ?? null,
             ]);
-            return response()->json(['message' => 'No se pudo guardar la evaluación.'], 500);
+            return response()->json([
+                'message' => 'No se pudo guardar la evaluación.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
         }
     }
 
@@ -167,6 +200,11 @@ class EvaluacionController extends Controller
                 $areaId  = $this->resolverAreaIdPorNombre($inscrito->area);
                 $nivelId = $this->resolverNivelIdPorNombre($inscrito->nivel);
 
+                // Verificar que el evaluador tenga un ID válido
+                if (!isset($evaluador->id) || $evaluador->id <= 0) {
+                    throw new \Exception('ID de evaluador inválido');
+                }
+
                 $eval = Evaluacion::firstOrNew([
                     'inscrito_id'  => $inscrito->id,
                     'evaluador_id' => $evaluador->id,
@@ -174,9 +212,23 @@ class EvaluacionController extends Controller
 
                 $eval->area_id       = $areaId;
                 $eval->nivel_id      = $nivelId;
-                $eval->notas         = $data['notas'];
-                $eval->nota_final    = $data['nota_final'];
-                $eval->concepto      = $data['concepto'];
+                
+                // Asegurar que notas sea un array
+                $eval->notas = isset($data['notas']) && is_array($data['notas']) ? $data['notas'] : [];
+                
+                // Manejar nota_final: puede ser null si es DESCLASIFICADO
+                if (isset($data['nota_final']) && $data['nota_final'] !== null && $data['nota_final'] !== '') {
+                    $eval->nota_final = $data['nota_final'];
+                } else {
+                    // Si el concepto es DESCLASIFICADO, permitir null
+                    if (isset($data['concepto']) && $data['concepto'] === 'DESCLASIFICADO') {
+                        $eval->nota_final = null;
+                    } else {
+                        $eval->nota_final = $data['nota_final'] ?? 0;
+                    }
+                }
+                
+                $eval->concepto = $data['concepto'] ?? null;
                 $eval->observaciones = $data['observaciones'] ?? null;
 
                 $eval->estado = 'finalizado';
@@ -192,8 +244,15 @@ class EvaluacionController extends Controller
                 'msg'  => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $data ?? null,
+                'evaluador_id' => $evaluador->id ?? null,
+                'inscrito_id' => $inscrito->id ?? null,
             ]);
-            return response()->json(['message' => 'No se pudo finalizar la evaluación.'], 500);
+            return response()->json([
+                'message' => 'No se pudo finalizar la evaluación.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
         }
     }
 

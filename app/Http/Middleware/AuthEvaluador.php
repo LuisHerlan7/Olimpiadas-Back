@@ -73,20 +73,29 @@ class AuthEvaluador
                             return $next($request);
                         }
                         
-                        // Si no hay Evaluador asociado, crear uno temporal basado en el Usuario
+                        // Si no hay Evaluador asociado, crear uno real en la base de datos
                         // Esto permite que usuarios del sistema con rol EVALUADOR accedan
-                        $evaluador = new Evaluador();
-                        $evaluador->setAttribute('id', -1); // ID temporal
-                        $evaluador->setAttribute('nombres', $usuario->nombres);
-                        $evaluador->setAttribute('apellidos', $usuario->apellidos);
-                        $evaluador->setAttribute('correo', $usuario->correo);
-                        $evaluador->setAttribute('ci', $usuario->ci ?? '');
-                        $evaluador->setAttribute('telefono', $usuario->telefono);
-                        $evaluador->setAttribute('activo', $usuario->estado ?? true);
-                        $evaluador->exists = false; // Marcar como no persistido
-                        
-                        $request->merge(['evaluador' => $evaluador]);
-                        return $next($request);
+                        try {
+                            $evaluador = Evaluador::create([
+                                'nombres' => $usuario->nombres,
+                                'apellidos' => $usuario->apellidos,
+                                'correo' => $usuario->correo,
+                                'ci' => $usuario->ci ?? '',
+                                'telefono' => $usuario->telefono ?? null,
+                                'activo' => $usuario->estado ?? true,
+                            ]);
+                            
+                            $request->merge(['evaluador' => $evaluador]);
+                            return $next($request);
+                        } catch (\Exception $e) {
+                            // Si falla la creación (por ejemplo, correo duplicado), intentar buscar de nuevo
+                            $evaluador = Evaluador::where('correo', $usuario->correo)->first();
+                            if ($evaluador) {
+                                $request->merge(['evaluador' => $evaluador]);
+                                return $next($request);
+                            }
+                            // Si aún falla, continuar con el flujo normal (fallará al final)
+                        }
                     }
                 }
             }
