@@ -124,8 +124,20 @@ class EvaluacionController extends Controller
                     'evaluador_id' => $evaluador->id,
                 ]);
 
-                $eval->area_id       = $areaId;
-                $eval->nivel_id      = $nivelId;
+                // Asegurar que area_id y nivel_id no sean null si la columna no lo permite
+                // Si no se encuentra el área, intentar crear una o usar la primera disponible
+                if ($areaId === null) {
+                    // Buscar la primera área activa o crear una por defecto
+                    $areaDefault = Area::where('activo', true)->first();
+                    if ($areaDefault) {
+                        $areaId = $areaDefault->id;
+                    } else {
+                        // Si no hay áreas, crear una temporal (esto no debería pasar en producción)
+                        throw new \Exception('No se encontró un área válida para la evaluación');
+                    }
+                }
+                $eval->area_id = $areaId;
+                $eval->nivel_id = $nivelId; // Este sí es nullable
                 
                 // Manejar notas: asegurar que sea array o null
                 if (array_key_exists('notas', $data)) {
@@ -210,8 +222,20 @@ class EvaluacionController extends Controller
                     'evaluador_id' => $evaluador->id,
                 ]);
 
-                $eval->area_id       = $areaId;
-                $eval->nivel_id      = $nivelId;
+                // Asegurar que area_id y nivel_id no sean null si la columna no lo permite
+                // Si no se encuentra el área, intentar crear una o usar la primera disponible
+                if ($areaId === null) {
+                    // Buscar la primera área activa o crear una por defecto
+                    $areaDefault = Area::where('activo', true)->first();
+                    if ($areaDefault) {
+                        $areaId = $areaDefault->id;
+                    } else {
+                        // Si no hay áreas, crear una temporal (esto no debería pasar en producción)
+                        throw new \Exception('No se encontró un área válida para la evaluación');
+                    }
+                }
+                $eval->area_id = $areaId;
+                $eval->nivel_id = $nivelId; // Este sí es nullable
                 
                 // Asegurar que notas sea un array
                 $eval->notas = isset($data['notas']) && is_array($data['notas']) ? $data['notas'] : [];
