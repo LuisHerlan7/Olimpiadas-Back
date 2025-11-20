@@ -19,6 +19,52 @@ class AuthController extends Controller
      * - Responsable (correo + CI) -> token plano
      * - Evaluador (correo + CI o correo + TOKEN emitido) -> token plano
      */
+
+
+
+public function registerUser(Request $request)
+{
+    // Validación de datos
+    $validator = Validator::make($request->all(), [
+        'nombres'   => 'required|string|max:100',
+        'apellidos' => 'required|string|max:100',
+        'correo'    => 'required|email|unique:usuarios,correo',
+        'telefono'  => 'nullable|string|max:20',
+        'ci'        => 'nullable|string|max:20',
+        'password'  => 'required|string|min:6',
+        'roles'     => 'nullable|array', // array de IDs de roles
+        'roles.*'   => 'exists:rol,id',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Error en la validación.',
+            'errors'  => $validator->errors(),
+        ], 422);
+    }
+
+    // Crear usuario
+    $usuario = Usuario::create([
+        'nombres'   => $request->nombres,
+        'apellidos' => $request->apellidos,
+        'correo'    => strtolower(trim($request->correo)),
+        'telefono'  => $request->telefono,
+        'ci'        => $request->ci,
+        'password'  => $request->password, // se hash automáticamente en el modelo
+        'estado'    => 'ACTIVO', // o tu valor por defecto
+    ]);
+
+    // Asignar roles si vienen
+    if ($request->roles) {
+        $usuario->roles()->sync($request->roles);
+    }
+
+    return response()->json([
+        'message' => 'Usuario creado correctamente.',
+        'user'    => $usuario->load('roles'),
+    ]);
+}
+
     public function login(Request $request)
     {
         $data = $request->validate([

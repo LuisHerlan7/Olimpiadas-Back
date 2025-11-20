@@ -44,6 +44,8 @@ Route::get('/ping', fn () => response()->json([
 // 🔐 AUTENTICACIÓN PRINCIPAL
 // =======================================================
 Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
+Route::post('/admin/usuarios', [AuthController::class, 'registerUser'])
+        ->name('admin.usuarios.register');
 
 // =======================================================
 // 🔒 ZONA PROTEGIDA (Sanctum) - Usuarios del sistema
