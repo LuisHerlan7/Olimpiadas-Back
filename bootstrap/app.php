@@ -22,10 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => CheckRole::class,
         ]);
 
-        // (opcional) si quieres forzar JSON en /api/*
-        // $middleware->appendToGroup('api', [
-        //     ForceJsonResponseForApi::class,
-        // ]);
+        // 🌐 Configurar CORS explícitamente para Laravel 11
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
