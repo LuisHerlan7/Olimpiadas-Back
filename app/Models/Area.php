@@ -13,7 +13,13 @@ class Area extends Model
 
     protected $fillable = [
         'nombre',
-        // otros campos que tengas...
+        'codigo',
+        'descripcion',
+        'activo',
+    ];
+
+    protected $casts = [
+        'activo' => 'boolean',
     ];
 
     public function evaluadores()
