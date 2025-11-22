@@ -13,7 +13,11 @@ use App\Http\Controllers\ClasificacionController;
 use App\Http\Controllers\FinalEvaluacionController;
 use App\Http\Controllers\LogNotasController;
 use App\Http\Controllers\FinalistaController; // ✅ NUEVO (HU-9)
+<<<<<<< HEAD
 use App\Http\Controllers\AreaController;
+=======
+use App\Http\Controllers\FaseController;
+>>>>>>> 7ec9b89e4bab8bf781093f170c6dbda7f0d47387
 
 // Middlewares
 use App\Http\Middleware\AuthResponsable;
@@ -44,6 +48,8 @@ Route::get('/ping', fn () => response()->json([
 // 🔐 AUTENTICACIÓN PRINCIPAL
 // =======================================================
 Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
+Route::post('/admin/usuarios', [AuthController::class, 'registerUser'])
+        ->name('admin.usuarios.register');
 
 // =======================================================
 // 🔒 ZONA PROTEGIDA (Sanctum) - Usuarios del sistema
@@ -62,6 +68,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
     Route::get('/niveles', fn () => Nivel::select('id', 'nombre')->orderBy('id')->get())
         ->name('catalogo.niveles');
+
+    // 📅 Fases del proceso
+    Route::get('/fases/inscripcion', [FaseController::class, 'getInscripcion'])
+        ->name('fases.inscripcion');
+    Route::get('/fases/asignacion', [FaseController::class, 'getAsignacion'])
+        ->name('fases.asignacion');
+    
+    // Gestión de fases (solo ADMIN)
+    Route::middleware('role:ADMINISTRADOR')->group(function () {
+        Route::put('/fases/inscripcion', [FaseController::class, 'updateInscripcion'])
+            ->name('fases.inscripcion.update');
+        Route::post('/fases/inscripcion/cancelar', [FaseController::class, 'cancelarInscripcion'])
+            ->name('fases.inscripcion.cancelar');
+        Route::put('/fases/asignacion', [FaseController::class, 'updateAsignacion'])
+            ->name('fases.asignacion.update');
+        Route::post('/fases/asignacion/cancelar', [FaseController::class, 'cancelarAsignacion'])
+            ->name('fases.asignacion.cancelar');
+    });
 
     // ===================================================
     // 👤 RESPONSABLES - CRUD (solo ADMIN)
