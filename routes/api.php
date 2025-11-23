@@ -32,6 +32,28 @@ use App\Models\Nivel;
 */
 
 // =======================================================
+// 🌐 CORS Preflight - Manejar OPTIONS requests explícitamente
+// =======================================================
+Route::match(['options'], '{any}', function (Request $request) {
+    $origin = $request->header('Origin');
+    $allowedOrigins = [
+        'https://ohsansi.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000',
+    ];
+    
+    $allowOrigin = in_array($origin, $allowedOrigins) || preg_match('#^https://.*\.vercel\.app$#', $origin ?? '')
+        ? $origin
+        : '*';
+    
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', $allowOrigin)
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept')
+        ->header('Access-Control-Max-Age', '86400');
+})->where('any', '.*');
+
+// =======================================================
 // 🩵 PING - Comprobación del backend
 // =======================================================
 Route::get('/ping', fn () => response()->json([
