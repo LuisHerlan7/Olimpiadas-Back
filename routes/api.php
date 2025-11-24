@@ -14,6 +14,7 @@ use App\Http\Controllers\FinalEvaluacionController;
 use App\Http\Controllers\LogNotasController;
 use App\Http\Controllers\FinalistaController; // ✅ NUEVO (HU-9)
 use App\Http\Controllers\FaseController;
+use App\Http\Controllers\AreaController;
 
 // Middlewares
 use App\Http\Middleware\AuthResponsable;
@@ -79,8 +80,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
     // 📋 Catálogos base
-    Route::get('/areas', fn () => Area::select('id', 'nombre', 'activo')->orderBy('nombre')->get())
-        ->name('catalogo.areas');
+    // Áreas - CRUD
+    Route::prefix('areas')->group(function () {
+        Route::get('/', [AreaController::class, 'index'])->name('areas.index');
+        Route::post('/', [AreaController::class, 'store'])->name('areas.store');
+        Route::get('/{area}', [AreaController::class, 'show'])->name('areas.show');
+        Route::put('/{area}', [AreaController::class, 'update'])->name('areas.update');
+        Route::delete('/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+    })->middleware('role:ADMINISTRADOR');
+    
     Route::get('/niveles', fn () => Nivel::select('id', 'nombre')->orderBy('id')->get())
         ->name('catalogo.niveles');
 
