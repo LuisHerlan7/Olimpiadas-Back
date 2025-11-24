@@ -1,8 +1,6 @@
 <?php
 
 return [
-<<<<<<< HEAD
-=======
 
     /*
     |--------------------------------------------------------------------------
@@ -17,17 +15,10 @@ return [
     |
     */
 
->>>>>>> 7ec9b89e4bab8bf781093f170c6dbda7f0d47387
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-<<<<<<< HEAD
-    // Allow the Vite dev server and local backend
-    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')),
-
-    'allowed_origins_patterns' => [],
-=======
     'allowed_origins' => [
         'http://localhost:5173',
         'http://localhost:3000',
@@ -39,23 +30,13 @@ return [
     'allowed_origins_patterns' => [
         '#^https://.*\.vercel\.app$#',
     ],
->>>>>>> 7ec9b89e4bab8bf781093f170c6dbda7f0d47387
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['Authorization'],
 
-<<<<<<< HEAD
-    // Allow cookies (credentials)
-    'max_age' => 0,
-
-    'supports_credentials' => true,
-];
-=======
-    'max_age' => 0,
+    'max_age' => 86400, // 24 horas para preflight cache
 
     'supports_credentials' => false,
 
 ];
-
->>>>>>> 7ec9b89e4bab8bf781093f170c6dbda7f0d47387
