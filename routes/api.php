@@ -13,11 +13,8 @@ use App\Http\Controllers\ClasificacionController;
 use App\Http\Controllers\FinalEvaluacionController;
 use App\Http\Controllers\LogNotasController;
 use App\Http\Controllers\FinalistaController; // ✅ NUEVO (HU-9)
-<<<<<<< HEAD
-use App\Http\Controllers\AreaController;
-=======
 use App\Http\Controllers\FaseController;
->>>>>>> 7ec9b89e4bab8bf781093f170c6dbda7f0d47387
+use App\Http\Controllers\AreaController;
 
 // Middlewares
 use App\Http\Middleware\AuthResponsable;
@@ -34,6 +31,28 @@ use App\Models\Nivel;
 | Nota: routes/api.php carga por defecto el middleware 'api'.
 |--------------------------------------------------------------------------
 */
+
+// =======================================================
+// 🌐 CORS Preflight - Manejar OPTIONS requests explícitamente
+// =======================================================
+Route::match(['options'], '{any}', function (Request $request) {
+    $origin = $request->header('Origin');
+    $allowedOrigins = [
+        'https://ohsansi.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000',
+    ];
+    
+    $allowOrigin = in_array($origin, $allowedOrigins) || preg_match('#^https://.*\.vercel\.app$#', $origin ?? '')
+        ? $origin
+        : '*';
+    
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', $allowOrigin)
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept')
+        ->header('Access-Control-Max-Age', '86400');
+})->where('any', '.*');
 
 // =======================================================
 // 🩵 PING - Comprobación del backend
@@ -61,11 +80,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
     // 📋 Catálogos base
-    Route::get('/areas', [AreaController::class, 'index'])->name('areas.index');
-    Route::get('/areas/{area}', [AreaController::class, 'show'])->name('areas.show');
-    Route::post('/areas', [AreaController::class, 'store'])->name('areas.store');
-    Route::put('/areas/{area}', [AreaController::class, 'update'])->name('areas.update');
-    Route::delete('/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+    // Áreas - CRUD
+    Route::prefix('areas')->group(function () {
+        Route::get('/', [AreaController::class, 'index'])->name('areas.index');
+        Route::post('/', [AreaController::class, 'store'])->name('areas.store');
+        Route::get('/{area}', [AreaController::class, 'show'])->name('areas.show');
+        Route::put('/{area}', [AreaController::class, 'update'])->name('areas.update');
+        Route::delete('/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+    })->middleware('role:ADMINISTRADOR');
+    
     Route::get('/niveles', fn () => Nivel::select('id', 'nombre')->orderBy('id')->get())
         ->name('catalogo.niveles');
 
