@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // 🌐 Configurar CORS explícitamente para Laravel 11
+        // HandleCors debe estar ANTES de otros middlewares
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);

@@ -41,16 +41,21 @@ Route::match(['options'], '{any}', function (Request $request) {
         'https://ohsansi.vercel.app',
         'http://localhost:5173',
         'http://localhost:3000',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:3000',
     ];
     
-    $allowOrigin = in_array($origin, $allowedOrigins) || preg_match('#^https://.*\.vercel\.app$#', $origin ?? '')
-        ? $origin
-        : '*';
+    // Verificar si el origen está permitido
+    $isAllowed = in_array($origin, $allowedOrigins) || 
+                 preg_match('#^https://.*\.vercel\.app$#', $origin ?? '');
+    
+    $allowOrigin = $isAllowed ? $origin : '*';
     
     return response('', 200)
         ->header('Access-Control-Allow-Origin', $allowOrigin)
         ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
-        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+        ->header('Access-Control-Allow-Credentials', 'false')
         ->header('Access-Control-Max-Age', '86400');
 })->where('any', '.*');
 
