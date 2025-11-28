@@ -79,12 +79,16 @@ public function registerUser(Request $request)
         $device = $data['device'] ?? 'web';
 
         /** 1) Usuarios (Sanctum) */
-        $user = Usuario::where('correo', $correo)->first();
+        // Buscar usuario - usar whereRaw para comparación exacta sin espacios
+        $user = Usuario::whereRaw('LOWER(TRIM(correo)) = ?', [strtolower(trim($correo))])->first();
         
         // Debug logging (temporal)
         \Log::info('Login attempt', [
-            'correo' => $correo,
+            'correo_input' => $correo,
+            'correo_length' => strlen($correo),
             'user_found' => $user ? 'yes' : 'no',
+            'user_correo' => $user ? $user->correo : 'N/A',
+            'user_correo_length' => $user ? strlen($user->correo) : 'N/A',
             'password_check' => $user ? Hash::check($secret, $user->password) : 'N/A',
         ]);
         
