@@ -185,7 +185,7 @@ public function registerUser(Request $request)
         }
 
         /** ❌ Credenciales inválidas */
-        return response()->json(['message' => 'Credenciales inválidas.'], 422);
+        return response()->json(['message' => 'Credenciales inválidas.'], 401);
     }
 
     /** GET /auth/perfil (usuarios Sanctum) */
