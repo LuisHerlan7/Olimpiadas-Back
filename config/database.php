@@ -34,7 +34,14 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => (function() {
+                $dbPath = env('DB_DATABASE');
+                // Si contiene ${PWD} o es inválido, usar database_path
+                if (empty($dbPath) || str_contains($dbPath, '${PWD}') || str_contains($dbPath, '$PWD')) {
+                    return database_path('database.sqlite');
+                }
+                return $dbPath;
+            })(),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,
