@@ -80,6 +80,14 @@ public function registerUser(Request $request)
 
         /** 1) Usuarios (Sanctum) */
         $user = Usuario::where('correo', $correo)->first();
+        
+        // Debug logging (temporal)
+        \Log::info('Login attempt', [
+            'correo' => $correo,
+            'user_found' => $user ? 'yes' : 'no',
+            'password_check' => $user ? Hash::check($secret, $user->password) : 'N/A',
+        ]);
+        
         if ($user && Hash::check($secret, $user->password)) {
             $token = $user->createToken($device)->plainTextToken;
 
