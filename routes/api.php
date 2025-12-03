@@ -15,6 +15,7 @@ use App\Http\Controllers\LogNotasController;
 use App\Http\Controllers\FinalistaController; // ✅ NUEVO (HU-9)
 use App\Http\Controllers\FaseController;
 use App\Http\Controllers\AreaController;
+use App\Http\Controllers\BitacoraController;
 
 // Middlewares
 use App\Http\Middleware\AuthResponsable;
@@ -151,6 +152,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/inscritos', [InscritoController::class, 'store'])->name('inscritos.store');
         Route::get('/inscritos', [InscritoController::class, 'getInscritos'])->name('inscritos.list');
         Route::delete('/inscritos/{id}', [InscritoController::class, 'destroy'])->name('inscritos.destroy');
+    });
+
+    // ===================================================
+    // 🧾 BITÁCORAS (solo ADMIN)
+    // ===================================================
+    Route::middleware(['role:ADMINISTRADOR'])->group(function () {
+        Route::get('/admin/bitacoras', [BitacoraController::class, 'index'])->name('admin.bitacoras.index');
     });
 });
 

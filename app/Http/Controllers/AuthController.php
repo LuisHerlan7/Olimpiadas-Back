@@ -11,6 +11,7 @@ use App\Models\Responsable;
 use App\Models\ResponsableToken;
 use App\Models\Evaluador;
 use App\Models\EvaluadorToken;
+use App\Models\Bitacora;
 
 class AuthController extends Controller
 {
@@ -84,6 +85,14 @@ public function registerUser(Request $request)
         if ($user && Hash::check($secret, $user->password)) {
             $token = $user->createToken($device)->plainTextToken;
 
+            // Registrar en bitácora (no bloquear login si falla)
+            try {
+                $rolSlug = $user->roles()->first()?->slug ?? 'ADMINISTRADOR';
+                Bitacora::registrar($correo, strtoupper($rolSlug), 'se conectó');
+            } catch (\Throwable $e) {
+                \Log::warning("Error al registrar bitácora en login: " . $e->getMessage());
+            }
+
             return response()->json([
                 'token'   => $token,
                 'user'    => $user->load('roles'),
@@ -112,6 +121,13 @@ public function registerUser(Request $request)
                     (object)[ 'id' => 2, 'nombre' => 'Responsable Académico', 'slug' => 'RESPONSABLE' ],
                 ],
             ];
+
+            // Registrar en bitácora (no bloquear login si falla)
+            try {
+                Bitacora::registrar($correo, 'RESPONSABLE', 'se conectó');
+            } catch (\Throwable $e) {
+                \Log::warning("Error al registrar bitácora en login responsable: " . $e->getMessage());
+            }
 
             return response()->json([
                 'token'   => $plainToken,
@@ -143,6 +159,13 @@ public function registerUser(Request $request)
                         (object)[ 'id' => 3, 'nombre' => 'Evaluador', 'slug' => 'EVALUADOR' ],
                     ],
                 ];
+
+                // Registrar en bitácora (no bloquear login si falla)
+                try {
+                    Bitacora::registrar($correo, 'EVALUADOR', 'se conectó');
+                } catch (\Throwable $e) {
+                    \Log::warning("Error al registrar bitácora en login evaluador: " . $e->getMessage());
+                }
 
                 return response()->json([
                     'token'   => $plainToken,
@@ -176,6 +199,13 @@ public function registerUser(Request $request)
                         (object)[ 'id' => 3, 'nombre' => 'Evaluador', 'slug' => 'EVALUADOR' ],
                     ],
                 ];
+
+                // Registrar en bitácora (no bloquear login si falla)
+                try {
+                    Bitacora::registrar($correo, 'EVALUADOR', 'se conectó');
+                } catch (\Throwable $e) {
+                    \Log::warning("Error al registrar bitácora en login evaluador: " . $e->getMessage());
+                }
 
                 return response()->json([
                     'token'   => $plainToken,
@@ -230,15 +260,42 @@ public function registerUser(Request $request)
     /** POST /auth/logout */
     public function logout(Request $request)
     {
+        $correo = null;
+        $tipo = null;
+
+        // Intentar obtener correo del usuario autenticado (Sanctum)
         if ($request->user()) {
+            $correo = $request->user()->correo;
+            $rolSlug = $request->user()->roles()->first()?->slug ?? 'ADMIN';
+            $tipo = strtoupper($rolSlug);
             $request->user()->currentAccessToken()?->delete();
         }
 
+        // Si no hay usuario Sanctum, intentar obtener de tokens planos
         $bearer = $request->bearerToken();
-        if ($bearer) {
+        if ($bearer && !$correo) {
             $hash = hash('sha256', $bearer);
-            ResponsableToken::where('token', $hash)->delete();
-            EvaluadorToken::where('token', $hash)->delete();
+            
+            // Buscar en responsable tokens
+            $respToken = ResponsableToken::where('token', $hash)->with('responsable')->first();
+            if ($respToken && $respToken->responsable) {
+                $correo = $respToken->responsable->correo;
+                $tipo = 'RESPONSABLE';
+                ResponsableToken::where('token', $hash)->delete();
+            } else {
+                // Buscar en evaluador tokens
+                $evalToken = EvaluadorToken::where('token', $hash)->with('evaluador')->first();
+                if ($evalToken && $evalToken->evaluador) {
+                    $correo = $evalToken->evaluador->correo;
+                    $tipo = 'EVALUADOR';
+                    EvaluadorToken::where('token', $hash)->delete();
+                }
+            }
+        }
+
+        // Registrar logout en bitácora si tenemos correo
+        if ($correo && $tipo) {
+            Bitacora::registrar($correo, $tipo, 'cerró sesión');
         }
 
         return response()->json(['message' => 'Sesión cerrada correctamente.']);

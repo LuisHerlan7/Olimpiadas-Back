@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Area;
+use App\Models\Bitacora;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class AreaController extends Controller
 {
@@ -44,6 +46,12 @@ class AreaController extends Controller
             'activo' => $request->boolean('activo', true),
         ]);
 
+        try {
+            $user = Auth::user();
+            $email = $user ? $user->correo : 'admin@ohsansi.bo';
+            Bitacora::registrar($email, 'ADMIN', "creó área: {$area->nombre}");
+        } catch (\Throwable) {}
+
         return response()->json($area, 201);
     }
 
@@ -81,6 +89,12 @@ class AreaController extends Controller
             'activo' => $request->has('activo') ? $request->boolean('activo') : $area->activo,
         ]);
 
+        try {
+            $user = Auth::user();
+            $email = $user ? $user->correo : 'admin@ohsansi.bo';
+            Bitacora::registrar($email, 'ADMIN', "editó área: {$area->nombre}");
+        } catch (\Throwable) {}
+
         return response()->json($area);
     }
 
@@ -90,7 +104,13 @@ class AreaController extends Controller
     public function destroy(Area $area)
     {
         try {
+            $nombreArea = $area->nombre;
             $area->delete();
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "eliminó área: {$nombreArea}");
+            } catch (\Throwable) {}
             return response()->json(null, 204);
         } catch (\Exception $e) {
             return response()->json([

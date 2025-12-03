@@ -7,6 +7,7 @@ use App\Http\Requests\ClasificacionPreviewRequest;
 use App\Http\Requests\ClasificacionConfirmRequest;
 use App\Models\CierreClasificacion;
 use App\Models\Evaluacion;
+use App\Models\Bitacora;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -128,6 +129,10 @@ class ClasificacionController extends Controller
             'hash'                  => $hash,
             'confirmado_at'         => now(),
         ]);
+
+        try {
+            Bitacora::registrar($responsable->correo, 'RESPONSABLE', "confirmó clasificación ({$preview['conteos']['clasificados']} clasificados)");
+        } catch (\Throwable) {}
 
         return response()->json(['message' => 'Clasificación confirmada', 'data' => $cierre], 200);
     }

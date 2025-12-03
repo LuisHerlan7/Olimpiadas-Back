@@ -8,6 +8,7 @@ use App\Models\Evaluacion;
 use App\Models\Inscrito;
 use App\Models\Area;
 use App\Models\Nivel;
+use App\Models\Bitacora;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -171,6 +172,11 @@ class EvaluacionController extends Controller
                 return $eval->fresh();
             });
 
+            // Registrar en bitácora
+            $nombreCompleto = trim($inscrito->apellidos . ' ' . $inscrito->nombres);
+            $mensaje = "subió notas de {$nombreCompleto} ({$inscrito->documento})";
+            Bitacora::registrar($evaluador->correo, 'EVALUADOR', $mensaje);
+
             return response()->json(['message' => 'Guardado en borrador', 'data' => $evaluacion], 200);
         } catch (Throwable $e) {
             Log::error('EVALUACION guardar error', [
@@ -262,6 +268,11 @@ class EvaluacionController extends Controller
                 return $eval->fresh();
             });
 
+            // Registrar en bitácora
+            $nombreCompleto = trim($inscrito->apellidos . ' ' . $inscrito->nombres);
+            $mensaje = "finalizó evaluación de {$nombreCompleto} ({$inscrito->documento})";
+            Bitacora::registrar($evaluador->correo, 'EVALUADOR', $mensaje);
+
             return response()->json(['message' => 'Evaluación finalizada', 'data' => $evaluacion], 200);
         } catch (Throwable $e) {
             Log::error('EVALUACION finalizar error', [
@@ -301,6 +312,11 @@ class EvaluacionController extends Controller
             $eval->estado = 'borrador';
             $eval->finalizado_at = null;
             $eval->save();
+
+            try {
+                $nombreCompleto = trim($inscrito->apellidos . ' ' . $inscrito->nombres);
+                Bitacora::registrar($responsable->correo, 'RESPONSABLE', "reabrió evaluación de {$nombreCompleto} ({$inscrito->documento})");
+            } catch (\Throwable) {}
 
             return response()->json(['message' => 'Evaluación reabierta', 'data' => $eval], 200);
         } catch (Throwable $e) {

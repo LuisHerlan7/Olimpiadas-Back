@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Models\Evaluador;
 use App\Models\EvaluadorToken;
 use App\Models\Audit;
+use App\Models\Bitacora;
 
 use App\Http\Requests\StoreEvaluadorRequest;
 use App\Http\Requests\UpdateEvaluadorRequest;
@@ -122,6 +123,11 @@ class EvaluadorController extends Controller
             } catch (Throwable $e) {
                 Log::warning('AUDIT store falló', ['id' => $evaluador->id, 'error' => $e->getMessage()]);
             }
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "creó evaluador: {$evaluador->nombres} {$evaluador->apellidos}");
+            } catch (Throwable) {}
 
             $shaped = $this->shapeEvaluador($evaluador);
             return response()->json(['message' => 'Evaluador creado', 'data' => $shaped], Response::HTTP_CREATED);
@@ -171,6 +177,11 @@ class EvaluadorController extends Controller
             } catch (Throwable $e) {
                 Log::warning('AUDIT update falló', ['id' => $evaluador->id, 'error' => $e->getMessage()]);
             }
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "editó evaluador: {$evaluador->nombres} {$evaluador->apellidos}");
+            } catch (Throwable) {}
 
             $shaped = $this->shapeEvaluador($fresh);
             return response()->json(['message' => 'Evaluador actualizado', 'data' => $shaped], 200);
@@ -211,6 +222,11 @@ class EvaluadorController extends Controller
             } catch (Throwable $e) {
                 Log::warning('AUDIT destroy falló', ['id' => $before['id'] ?? null, 'error' => $e->getMessage()]);
             }
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "eliminó evaluador: {$before['nombres']} {$before['apellidos']}");
+            } catch (Throwable) {}
 
             return response()->json(['message' => 'Evaluador eliminado'], 200);
 
@@ -256,6 +272,11 @@ class EvaluadorController extends Controller
             } catch (Throwable $e) {
                 Log::warning('AUDIT emitirToken falló', ['id' => $evaluador->id, 'error' => $e->getMessage()]);
             }
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "emitió token para evaluador: {$evaluador->nombres} {$evaluador->apellidos}");
+            } catch (Throwable) {}
 
             return response()->json([
                 'message' => 'Token emitido',
@@ -281,6 +302,11 @@ class EvaluadorController extends Controller
             } catch (Throwable $e) {
                 Log::warning('AUDIT revocarTokens falló', ['id' => $evaluador->id, 'error' => $e->getMessage()]);
             }
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "revocó tokens de evaluador: {$evaluador->nombres} {$evaluador->apellidos}");
+            } catch (Throwable) {}
 
             return response()->json(['message' => 'Todos los tokens del evaluador fueron revocados.'], 200);
 

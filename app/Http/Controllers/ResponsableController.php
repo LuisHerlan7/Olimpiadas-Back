@@ -13,6 +13,7 @@ use Throwable;
 use App\Models\Responsable;
 use App\Models\Inscrito;
 use App\Models\Audit;
+use App\Models\Bitacora;
 use App\Http\Requests\StoreResponsableRequest;
 use App\Http\Requests\UpdateResponsableRequest;
 
@@ -97,6 +98,11 @@ class ResponsableController extends Controller
         try {
             $r = DB::transaction(fn () => Responsable::create($data));
             try { Audit::log(Auth::id(), 'Responsable', $r->id, 'CREAR', $r->toArray()); } catch (Throwable) {}
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "creó responsable: {$r->nombres} {$r->apellidos}");
+            } catch (Throwable) {}
             $r->load(['area', 'nivel']);
             return response()->json(['message' => 'Creado', 'data' => $r], Response::HTTP_CREATED);
 
@@ -134,6 +140,11 @@ class ResponsableController extends Controller
         try {
             DB::transaction(fn () => $responsable->update($data));
             try { Audit::log(Auth::id(), 'Responsable', $responsable->id, 'EDITAR', ['before' => $before, 'after' => $responsable->fresh()->toArray()]); } catch (Throwable) {}
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "editó responsable: {$responsable->nombres} {$responsable->apellidos}");
+            } catch (Throwable) {}
 
             return response()->json(['message' => 'Actualizado', 'data' => $responsable->fresh(['area','nivel'])]);
 
@@ -154,11 +165,21 @@ class ResponsableController extends Controller
             if ($request->boolean('hard')) {
                 $responsable->forceDelete();
                 try { Audit::log(Auth::id(), 'Responsable', $before['id'] ?? null, 'ELIMINAR', ['before' => $before]); } catch (Throwable) {}
+                try {
+                    $user = Auth::user();
+                    $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                    Bitacora::registrar($email, 'ADMIN', "eliminó responsable: {$before['nombres']} {$before['apellidos']}");
+                } catch (Throwable) {}
                 return response()->json(['message' => 'Responsable eliminado definitivamente']);
             }
 
             DB::transaction(fn () => $responsable->update(['activo' => false]));
             try { Audit::log(Auth::id(), 'Responsable', $responsable->id, 'EDITAR', ['before' => $before, 'after' => $responsable->toArray()]); } catch (Throwable) {}
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "inactivó responsable: {$responsable->nombres} {$responsable->apellidos}");
+            } catch (Throwable) {}
 
             return response()->json(['message' => 'Responsable inactivado']);
 

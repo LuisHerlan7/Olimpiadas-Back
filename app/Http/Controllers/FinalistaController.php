@@ -12,6 +12,7 @@ use App\Models\Evaluacion;
 use App\Models\Finalista;
 use App\Models\FinalSnapshot;
 use App\Models\Audit;
+use App\Models\Bitacora;
 
 use Throwable;
 
@@ -189,6 +190,9 @@ class FinalistaController extends Controller
             } catch (Throwable $e) {
                 Log::warning('AUDIT PROMOVER falló', ['error' => $e->getMessage()]);
             }
+            try {
+                Bitacora::registrar($responsable->correo, 'RESPONSABLE', "promovió {$ids->count()} clasificados a fase final");
+            } catch (Throwable) {}
 
             return response()->json([
                 'message'  => 'Entorno preparado',

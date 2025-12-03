@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\Fase;
+use App\Models\Bitacora;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class FaseController extends Controller
 {
@@ -120,6 +122,13 @@ class FaseController extends Controller
 
             $activa = $fase->estaActiva();
 
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                $estado = $activa ? 'activó' : 'actualizó';
+                Bitacora::registrar($email, 'ADMIN', "{$estado} fase de inscripción");
+            } catch (\Throwable) {}
+
             return response()->json([
                 'message' => 'Fase de inscripción actualizada exitosamente',
                 'data' => [
@@ -166,6 +175,12 @@ class FaseController extends Controller
             $fase->activa = false;
             $fase->mensaje = 'Fase de inscripción cancelada';
             $fase->save();
+
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', 'canceló fase de inscripción');
+            } catch (\Throwable) {}
 
             return response()->json([
                 'message' => 'Fase de inscripción cancelada exitosamente',
@@ -294,6 +309,13 @@ class FaseController extends Controller
 
             $activa = $fase->estaActiva();
 
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                $estado = $activa ? 'activó' : 'actualizó';
+                Bitacora::registrar($email, 'ADMIN', "{$estado} fase de asignación");
+            } catch (\Throwable) {}
+
             return response()->json([
                 'message' => 'Fase de asignación actualizada exitosamente',
                 'data' => [
@@ -340,6 +362,12 @@ class FaseController extends Controller
             $fase->activa = false;
             $fase->mensaje = 'Fase de asignación (subida de notas) cancelada';
             $fase->save();
+
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', 'canceló fase de asignación');
+            } catch (\Throwable) {}
 
             return response()->json([
                 'message' => 'Fase de asignación cancelada exitosamente',

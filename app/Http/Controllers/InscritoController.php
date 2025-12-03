@@ -2,9 +2,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Inscrito;
+use App\Models\Bitacora;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class InscritoController extends Controller
 {
@@ -150,7 +152,7 @@ class InscritoController extends Controller
         if (!$simulate) {
             try {
                 // ⚠️ Si tu tabla realmente usa area_id/nivel_id, reemplaza por esos campos.
-                \App\Models\Inscrito::create([
+                $inscrito = \App\Models\Inscrito::create([
                     'documento' => $documento,
                     'nombres'   => $nombres,
                     'apellidos' => $apellidos,
@@ -159,6 +161,14 @@ class InscritoController extends Controller
                     'nivel'     => $nivel,  // o 'nivel_id' => <mapear>
                 ]);
                 $inserted++;
+                // Registrar solo el primero para no saturar bitácoras
+                if ($inserted === 1) {
+                    try {
+                        $user = Auth::user();
+                        $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                        Bitacora::registrar($email, 'ADMIN', "importó inscritos desde CSV ({$processed} registros procesados)");
+                    } catch (\Throwable) {}
+                }
             } catch (\Throwable $e) {
                 $errors[] = ['row' => $rowNumber, 'cause' => 'Error al insertar: '.$e->getMessage()];
                 // no lanzamos, seguimos con el resto
@@ -230,6 +240,12 @@ class InscritoController extends Controller
 
             $inscrito = Inscrito::create($validated);
 
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "creó inscrito: {$inscrito->nombres} {$inscrito->apellidos} ({$inscrito->documento})");
+            } catch (\Throwable) {}
+
             return response()->json([
                 'message' => 'Inscrito creado exitosamente.',
                 'data' => $inscrito
@@ -260,7 +276,15 @@ class InscritoController extends Controller
                 ], 404);
             }
 
+            $nombreCompleto = trim($inscrito->apellidos . ' ' . $inscrito->nombres);
+            $documento = $inscrito->documento;
             $inscrito->delete();
+
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', "eliminó inscrito: {$nombreCompleto} ({$documento})");
+            } catch (\Throwable) {}
 
             return response()->json([
                 'message' => 'Inscrito eliminado exitosamente.'

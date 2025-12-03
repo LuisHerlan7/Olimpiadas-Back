@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Models\Finalista;
 use App\Models\EvaluacionFinal;
 use App\Models\Audit;
+use App\Models\Bitacora;
 
 class FinalEvaluacionController extends Controller
 {
@@ -113,6 +114,11 @@ class FinalEvaluacionController extends Controller
         $row->save();
 
         try { Audit::log($evaluador->id ?? 0, 'EvaluacionFinal', $row->id, 'GUARDAR', $row->toArray()); } catch (\Throwable) {}
+        try {
+            $inscrito = $finalista->inscrito;
+            $nombreCompleto = $inscrito ? trim($inscrito->apellidos . ' ' . $inscrito->nombres) : 'Finalista #' . $finalista->id;
+            Bitacora::registrar($evaluador->correo, 'EVALUADOR', "subió notas de fase final de {$nombreCompleto}");
+        } catch (\Throwable) {}
 
         return response()->json(['message'=>'Guardado','data'=>$row], 200);
     }
@@ -150,6 +156,11 @@ class FinalEvaluacionController extends Controller
         $row->save();
 
         try { Audit::log($evaluador->id ?? 0, 'EvaluacionFinal', $row->id, 'FINALIZAR', ['nota_final'=>$row->nota_final]); } catch (\Throwable) {}
+        try {
+            $inscrito = $finalista->inscrito;
+            $nombreCompleto = $inscrito ? trim($inscrito->apellidos . ' ' . $inscrito->nombres) : 'Finalista #' . $finalista->id;
+            Bitacora::registrar($evaluador->correo, 'EVALUADOR', "finalizó evaluación de fase final de {$nombreCompleto}");
+        } catch (\Throwable) {}
 
         return response()->json(['message'=>'Finalizada','data'=>$row], 200);
     }
@@ -225,6 +236,11 @@ class FinalEvaluacionController extends Controller
             Audit::log($responsable->id ?? 0, 'EvaluacionFinal', $row->id, 'REABRIR', [
                 'motivo' => $payload['motivo']
             ]);
+        } catch (\Throwable) {}
+        try {
+            $inscrito = $finalista->inscrito;
+            $nombreCompleto = $inscrito ? trim($inscrito->apellidos . ' ' . $inscrito->nombres) : 'Finalista #' . $finalista->id;
+            Bitacora::registrar($responsable->correo, 'RESPONSABLE', "reabrió evaluación de fase final de {$nombreCompleto}");
         } catch (\Throwable) {}
 
         return response()->json(['message'=>'Reabierta','data'=>$row], 200);
