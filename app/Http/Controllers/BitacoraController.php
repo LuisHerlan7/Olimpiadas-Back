@@ -24,14 +24,21 @@ class BitacoraController extends Controller
                 ->orderByDesc('created_at')
                 ->orderByDesc('id');
 
-            // Filtro opcional por correo
+            // Filtro opcional por correo (sanitizado para prevenir SQL injection)
             if ($request->filled('actor_email')) {
-                $query->where('actor_email', 'like', '%' . $request->input('actor_email') . '%');
+                $email = trim($request->input('actor_email'));
+                if (!empty($email)) {
+                    $query->where('actor_email', 'like', '%' . $email . '%');
+                }
             }
 
-            // Filtro opcional por tipo
+            // Filtro opcional por tipo (validado contra valores permitidos)
             if ($request->filled('actor_tipo')) {
-                $query->where('actor_tipo', $request->input('actor_tipo'));
+                $tipo = strtoupper(trim($request->input('actor_tipo')));
+                $tiposPermitidos = ['ADMIN', 'ADMINISTRADOR', 'EVALUADOR', 'RESPONSABLE'];
+                if (in_array($tipo, $tiposPermitidos)) {
+                    $query->where('actor_tipo', $tipo);
+                }
             }
 
             $bitacoras = $query->paginate($perPage, ['*'], 'page', $page);

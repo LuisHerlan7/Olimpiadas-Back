@@ -276,7 +276,8 @@ class InscritoController extends Controller
                 ], 404);
             }
 
-            $nombreCompleto = trim($inscrito->apellidos . ' ' . $inscrito->nombres);
+            // Guardar datos antes de eliminar para el registro en bitácora
+            $nombreCompleto = trim($inscrito->nombres . ' ' . $inscrito->apellidos);
             $documento = $inscrito->documento;
             $inscrito->delete();
 
