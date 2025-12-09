@@ -26,10 +26,13 @@ class AreaController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'required|string|max:10|unique:areas,codigo',
+            'nombre' => 'required|string|max:20',
+            'codigo' => ['required', 'string', 'max:10', 'regex:/^[A-Za-z0-9]+$/'],
             'descripcion' => 'nullable|string',
             'activo' => 'boolean',
+        ], [
+            'codigo.regex' => 'El código sólo puede contener letras y números sin caracteres especiales.',
+            'nombre.max' => 'El nombre debe tener como máximo 20 caracteres.',
         ]);
 
         if ($validator->fails()) {
@@ -39,9 +42,21 @@ class AreaController extends Controller
             ], 422);
         }
 
+        // Normalize codigo to uppercase
+        $codigo = strtoupper($request->codigo);
+
+        // Check uniqueness case-insensitive
+        $exists = Area::whereRaw('upper(codigo) = ?', [$codigo])->exists();
+        if ($exists) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => ['codigo' => ["El código ya está en uso"]],
+            ], 422);
+        }
+
         $area = Area::create([
             'nombre' => $request->nombre,
-            'codigo' => strtoupper($request->codigo),
+            'codigo' => $codigo,
             'descripcion' => $request->descripcion,
             'activo' => $request->boolean('activo', true),
         ]);
@@ -69,10 +84,13 @@ class AreaController extends Controller
     public function update(Request $request, Area $area)
     {
         $validator = Validator::make($request->all(), [
-            'nombre' => 'sometimes|required|string|max:255',
-            'codigo' => 'sometimes|required|string|max:10|unique:areas,codigo,' . $area->id,
+            'nombre' => 'sometimes|required|string|max:20',
+            'codigo' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Za-z0-9]+$/'],
             'descripcion' => 'nullable|string',
             'activo' => 'boolean',
+        ], [
+            'codigo.regex' => 'El código sólo puede contener letras y números sin caracteres especiales.',
+            'nombre.max' => 'El nombre debe tener como máximo 20 caracteres.',
         ]);
 
         if ($validator->fails()) {
@@ -82,12 +100,28 @@ class AreaController extends Controller
             ], 422);
         }
 
-        $area->update([
-            'nombre' => $request->has('nombre') ? $request->nombre : $area->nombre,
-            'codigo' => $request->has('codigo') ? strtoupper($request->codigo) : $area->codigo,
-            'descripcion' => $request->has('descripcion') ? $request->descripcion : $area->descripcion,
-            'activo' => $request->has('activo') ? $request->boolean('activo') : $area->activo,
-        ]);
+        $data = [];
+        if ($request->has('nombre')) $data['nombre'] = $request->nombre;
+        if ($request->has('codigo')) {
+            $newCodigo = strtoupper($request->codigo);
+            // Check uniqueness case-insensitive excluding current area
+            $exists = Area::whereRaw('upper(codigo) = ?', [$newCodigo])->where('id', '!=', $area->id)->exists();
+            if ($exists) {
+                return response()->json([
+                    'message' => 'Error de validación',
+                    'errors' => ['codigo' => ["El código ya está en uso"]],
+                ], 422);
+            }
+            $data['codigo'] = $newCodigo;
+        }
+        if ($request->has('descripcion')) $data['descripcion'] = $request->descripcion;
+        // Use array_key_exists to detect presence of boolean 'activo' even when it's false
+        $all = $request->all();
+        if (array_key_exists('activo', $all)) {
+            $data['activo'] = $request->boolean('activo');
+        }
+
+        $area->update($data);
 
         try {
             $user = Auth::user();
