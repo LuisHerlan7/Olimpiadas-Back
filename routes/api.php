@@ -103,6 +103,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('fases.inscripcion');
     Route::get('/fases/asignacion', [FaseController::class, 'getAsignacion'])
         ->name('fases.asignacion');
+    Route::get('/fases/clasificados', [FaseController::class, 'getClasificados'])
+        ->name('fases.clasificados');
     
     // Gestión de fases (solo ADMIN)
     Route::middleware('role:ADMINISTRADOR')->group(function () {
@@ -114,6 +116,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('fases.asignacion.update');
         Route::post('/fases/asignacion/cancelar', [FaseController::class, 'cancelarAsignacion'])
             ->name('fases.asignacion.cancelar');
+        Route::put('/fases/clasificados', [FaseController::class, 'updateClasificados'])
+            ->name('fases.clasificados.update');
+        Route::post('/fases/clasificados/cancelar', [FaseController::class, 'cancelarClasificados'])
+            ->name('fases.clasificados.cancelar');
     });
 
     // ===================================================
@@ -151,6 +157,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/inscritos/import', [InscritoController::class, 'import'])->name('inscritos.import');
         Route::post('/inscritos', [InscritoController::class, 'store'])->name('inscritos.store');
         Route::get('/inscritos', [InscritoController::class, 'getInscritos'])->name('inscritos.list');
+        Route::put('/inscritos/{id}', [InscritoController::class, 'update'])->name('inscritos.update');
         Route::delete('/inscritos/{id}', [InscritoController::class, 'destroy'])->name('inscritos.destroy');
     });
 
@@ -180,6 +187,9 @@ Route::middleware(AuthResponsable::class)->group(function () {
     // Opciones dinámicas para combos
     Route::get('/responsable/opciones-filtros', [ResponsableController::class, 'opcionesFiltros'])
         ->name('responsable.opcionesFiltros');
+
+    // Editar inscrito (competidor)
+    Route::put('/inscritos/{id}', [InscritoController::class, 'update'])->name('inscritos.update.responsable');
 
     // Reabrir evaluaciones
     Route::post('/evaluaciones/{inscrito}/reabrir', [EvaluacionController::class, 'reabrir'])

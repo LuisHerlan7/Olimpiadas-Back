@@ -300,5 +300,66 @@ class InscritoController extends Controller
         }
     }
 
+    public function update($id)
+    {
+        try {
+            $inscrito = Inscrito::find($id);
+            
+            if (!$inscrito) {
+                return response()->json([
+                    'message' => 'Inscrito no encontrado.'
+                ], 404);
+            }
+
+            $validator = Validator::make(request()->all(), [
+                'documento' => 'sometimes|required|string|unique:inscritos,documento,' . $id,
+                'nombres' => 'sometimes|required|string',
+                'apellidos' => 'sometimes|required|string',
+                'unidad' => 'nullable|string',
+                'area' => 'nullable|string',
+                'nivel' => 'nullable|string',
+                'area_id' => 'nullable|integer|exists:areas,id',
+                'nivel_id' => 'nullable|integer|exists:niveles,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Error de validación.',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $data = request()->only([
+                'documento', 'nombres', 'apellidos', 'unidad', 'area', 'nivel', 'area_id', 'nivel_id'
+            ]);
+            
+            $inscrito->update($data);
+
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                $nombreCompleto = trim($inscrito->nombres . ' ' . $inscrito->apellidos);
+                Bitacora::registrar($email, 'ADMIN', "editó inscrito: {$nombreCompleto}");
+            } catch (\Throwable) {}
+
+            return response()->json([
+                'message' => 'Inscrito actualizado exitosamente.',
+                'data' => $inscrito
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar inscrito: " . $e->getMessage());
+            return response()->json([
+                'message' => 'No se pudo actualizar el inscrito.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
 

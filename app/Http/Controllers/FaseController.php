@@ -386,5 +386,201 @@ class FaseController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener el estado de la fase de clasificados
+     */
+    public function getClasificados(): JsonResponse
+    {
+        try {
+            $fase = Fase::where('nombre', 'clasificados')->first();
+            
+            if (!$fase) {
+                $fase = Fase::create([
+                    'nombre' => 'clasificados',
+                    'activa' => false,
+                    'cancelada' => false,
+                    'nota_minima_suficiente' => 70,
+                ]);
+            }
+
+            $activa = $fase->estaActiva();
+            
+            return response()->json([
+                'id' => $fase->id,
+                'activa' => $activa,
+                'fecha_inicio' => $fase->fecha_inicio?->toIso8601String(),
+                'fecha_fin' => $fase->fecha_fin?->toIso8601String(),
+                'cancelada' => $fase->cancelada,
+                'nota_minima_suficiente' => $fase->nota_minima_suficiente ?? 70,
+                'mensaje' => $fase->mensaje ?? ($activa 
+                    ? 'Fase de clasificados activa' 
+                    : 'Fase de clasificados no está activa'),
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error("Error de base de datos al obtener fase de clasificados: " . $e->getMessage());
+            return response()->json([
+                'activa' => false,
+                'mensaje' => 'Error de base de datos. Verifica que la tabla "fases" exista.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error de base de datos',
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error("Error al obtener fase de clasificados: " . $e->getMessage());
+            return response()->json([
+                'activa' => false,
+                'mensaje' => 'Error al obtener el estado de la fase',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno',
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar la fase de clasificados
+     */
+    public function updateClasificados(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'fecha_inicio' => 'nullable|date',
+                'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
+                'activa' => 'nullable|boolean',
+                'nota_minima_suficiente' => 'nullable|numeric|min:0|max:100',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $fase = Fase::where('nombre', 'clasificados')->first();
+            
+            if (!$fase) {
+                $fase = new Fase();
+                $fase->nombre = 'clasificados';
+                $fase->activa = false;
+                $fase->cancelada = false;
+                $fase->nota_minima_suficiente = 70;
+            }
+
+            if ($request->has('fecha_inicio') && $request->fecha_inicio) {
+                try {
+                    $fase->fecha_inicio = \Carbon\Carbon::parse($request->fecha_inicio);
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'message' => 'Error al parsear fecha_inicio',
+                        'error' => $e->getMessage(),
+                    ], 422);
+                }
+            } elseif ($request->has('fecha_inicio') && !$request->fecha_inicio) {
+                $fase->fecha_inicio = null;
+            }
+            
+            if ($request->has('fecha_fin') && $request->fecha_fin) {
+                try {
+                    $fase->fecha_fin = \Carbon\Carbon::parse($request->fecha_fin);
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'message' => 'Error al parsear fecha_fin',
+                        'error' => $e->getMessage(),
+                    ], 422);
+                }
+            } elseif ($request->has('fecha_fin') && !$request->fecha_fin) {
+                $fase->fecha_fin = null;
+            }
+            
+            if ($request->has('activa')) {
+                $fase->activa = (bool) $request->activa;
+            }
+
+            if ($request->has('nota_minima_suficiente')) {
+                $fase->nota_minima_suficiente = $request->nota_minima_suficiente ?? 70;
+            }
+
+            $fase->cancelada = false;
+            $fase->mensaje = null;
+            $fase->save();
+
+            $activa = $fase->estaActiva();
+
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                $estado = $activa ? 'activó' : 'actualizó';
+                Bitacora::registrar($email, 'ADMIN', "{$estado} fase de clasificados");
+            } catch (\Throwable) {}
+
+            return response()->json([
+                'message' => 'Fase de clasificados actualizada exitosamente',
+                'data' => [
+                    'id' => $fase->id,
+                    'activa' => $activa,
+                    'fecha_inicio' => $fase->fecha_inicio?->toIso8601String(),
+                    'fecha_fin' => $fase->fecha_fin?->toIso8601String(),
+                    'cancelada' => $fase->cancelada,
+                    'nota_minima_suficiente' => $fase->nota_minima_suficiente ?? 70,
+                    'mensaje' => $fase->mensaje ?? ($activa 
+                        ? 'Fase de clasificados activa' 
+                        : 'Fase de clasificados no está activa'),
+                ],
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error("Error de base de datos al actualizar fase de clasificados: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error de base de datos. Verifica que la tabla "fases" exista.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error de base de datos',
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar fase de clasificados: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+            return response()->json([
+                'message' => 'Error al actualizar la fase de clasificados',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor',
+            ], 500);
+        }
+    }
+
+    /**
+     * Cancelar la fase de clasificados
+     */
+    public function cancelarClasificados(): JsonResponse
+    {
+        try {
+            $fase = Fase::where('nombre', 'clasificados')->first();
+            
+            if (!$fase) {
+                $fase = new Fase();
+                $fase->nombre = 'clasificados';
+            }
+
+            $fase->cancelada = true;
+            $fase->activa = false;
+            $fase->mensaje = 'Fase de clasificados cancelada';
+            $fase->save();
+
+            try {
+                $user = Auth::user();
+                $email = $user ? $user->correo : 'admin@ohsansi.bo';
+                Bitacora::registrar($email, 'ADMIN', 'canceló fase de clasificados');
+            } catch (\Throwable) {}
+
+            return response()->json([
+                'message' => 'Fase de clasificados cancelada exitosamente',
+                'data' => [
+                    'id' => $fase->id,
+                    'activa' => false,
+                    'cancelada' => true,
+                    'mensaje' => $fase->mensaje,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al cancelar fase de clasificados: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al cancelar la fase de clasificados',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 

@@ -80,7 +80,7 @@ class AuthResponsable
                         // Si no hay Responsable asociado, crear uno temporal basado en el Usuario
                         // Esto permite que usuarios del sistema con rol RESPONSABLE accedan
                         $responsable = new Responsable();
-                        $responsable->setAttribute('id', -1); // ID temporal
+                        $responsable->setAttribute('id', $usuario->id); // Usar el ID del Usuario
                         $responsable->setAttribute('nombres', $usuario->nombres);
                         $responsable->setAttribute('apellidos', $usuario->apellidos);
                         $responsable->setAttribute('correo', $usuario->correo);

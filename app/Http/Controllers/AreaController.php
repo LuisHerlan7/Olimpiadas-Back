@@ -138,6 +138,19 @@ class AreaController extends Controller
     public function destroy(Area $area)
     {
         try {
+            // Verificar si hay inscritos en esta área
+            $inscritos_count = \App\Models\Inscrito::where('area_id', $area->id)->count();
+            
+            if ($inscritos_count > 0) {
+                return response()->json([
+                    'message' => 'No se puede eliminar un área con estudiantes inscritos',
+                    'error' => 'Dependencias encontradas',
+                    'dependencias' => [
+                        'inscritos' => $inscritos_count
+                    ]
+                ], 409);
+            }
+
             $nombreArea = $area->nombre;
             $area->delete();
             try {

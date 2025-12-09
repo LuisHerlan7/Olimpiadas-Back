@@ -13,6 +13,7 @@ class Fase extends Model
         'activa',
         'cancelada',
         'mensaje',
+        'nota_minima_suficiente',
     ];
 
     protected $casts = [
